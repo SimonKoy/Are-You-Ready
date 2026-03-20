@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Emergency Supply Planner</title>
+
+<style>
+
+/* =========================================
+GLOBAL
+========================================= */
+
+body{
+font-family:Arial, sans-serif;
+margin:0;
+background:#f4f7fb;
+}
+
+.container{
+max-width:1100px;
+margin:auto;
+padding:20px;
+}
+
+h1{
+text-align:center;
+color:#1f4e79;
+}
+
+/* Card */
+.card{
+background:white;
+padding:20px;
+border-radius:12px;
+box-shadow:0 4px 12px rgba(0,0,0,0.08);
+margin-bottom:20px;
+}
+
+/* Inputs */
+.input-group{
+display:flex;
+flex-wrap:wrap;
+gap:10px;
+justify-content:center;
+}
+
+input{
+padding:8px;
+border-radius:6px;
+border:1px solid #ccc;
+}
+
+/* Buttons */
+.buttonBar{
+text-align:center;
+margin-top:10px;
+}
+
+button{
+margin:5px;
+padding:10px 15px;
+border:none;
+border-radius:6px;
+cursor:pointer;
+font-weight:bold;
+}
+
+.calculateBtn{background:#2e7d32;color:white;}
+.resetBtn{background:#c62828;color:white;}
+.printBtn{background:#424242;color:white;}
+
+/* Table */
+table{
+width:100%;
+border-collapse:collapse;
+}
+
+th{
+background:#1f4e79;
+color:white;
+padding:10px;
+}
+
+td{
+padding:10px;
+text-align:center;
+border-bottom:1px solid #eee;
+}
+
+/* Zebra rows */
+tbody tr:nth-child(even){
+background:#f9fbff;
+}
+
+/* Hover */
+tbody tr:hover{
+background:#e3f2fd;
+}
+
+/* Missing */
+.missing{
+color:#c62828;
+white-space:pre-line;
+}
+
+/* Progress */
+.progress{
+height:20px;
+background:#ddd;
+border-radius:10px;
+overflow:hidden;
+}
+
+.progress-bar{
+height:100%;
+width:0%;
+background:#2e7d32;
+}
+
+/* PRINT MODE */
+@media print{
+
+body *{
+visibility:hidden;
+}
+
+#printArea, #printArea *{
+visibility:visible;
+}
+
+#printArea{
+position:absolute;
+top:0;
+left:0;
+width:100%;
+}
+
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>Emergency Supply Planner</h1>
+
+<!-- INPUT -->
+<div class="card noPrint">
+<div class="input-group">
+
+<label>People:
+<input type="number" id="people" value="1">
+</label>
+
+<label>Days:
+<input type="number" id="days" value="3">
+</label>
+
+</div>
+
+<div class="buttonBar">
+<button class="calculateBtn" onclick="calculate()">Calculate</button>
+<button class="resetBtn" onclick="resetForm()">Reset</button>
+<button class="printBtn" onclick="window.print()">Print / Save PDF</button>
+</div>
+</div>
+
+<!-- DECISION ENGINE -->
+<div class="card noPrint">
+
+<h3>Household Conditions</h3>
+
+<div class="input-group">
+
+<h3>Weather Conditions</h3>
+
+<label><input type="checkbox" onchange="applyWeather('cold')"> ❄ Freezing / Cold</label>
+<label><input type="checkbox" onchange="applyWeather('storm')"> 🌨 Storm / Snow</label>
+<label><input type="checkbox" onchange="applyWeather('rain')"> 🌧 Heavy Rain</label>
+
+<label><input type="checkbox" onchange="applyDecision('infant')"> 👶 Infants</label>
+<label><input type="checkbox" onchange="applyDecision('pets')"> 🐶 Pets</label>
+<label><input type="checkbox" onchange="applyDecision('medical')"> 💊 Medical Needs</label>
+
+</div>
+
+</div>
+
+<!-- PROGRESS -->
+<div class="card noPrint">
+<h3>Preparedness</h3>
+<div class="progress">
+<div class="progress-bar" id="progressBar"></div>
+</div>
+<p id="progressText">0%</p>
+</div>
+
+<!-- MISSING -->
+<div class="card noPrint">
+<h3>Missing Items</h3>
+<div id="missingItems" class="missing">None</div>
+</div>
+
+<!-- TABLE -->
+<div class="card" id="printArea">
+
+<table>
+
+<thead>
+<tr>
+<th>✔</th>
+<th>Category</th>
+<th>Item</th>
+<th>Total</th>
+</tr>
+</thead>
+
+<tbody id="results"></tbody>
+
+</table>
+
+</div>
+
+</div>
+
+<script>
+
+/* =========================================
+BASE SUPPLIES
+========================================= */
+
+let baseSupplies=[
+{category:"Water",item:"Water (L)",perDay:3},
+{category:"Food",item:"Meals",perDay:3},
+{category:"Lighting",item:"Flashlights",perDay:0},
+{category:"Shelter",item:"Blankets",perDay:0}
+];
+
+let supplies=[...baseSupplies];
+
+/* =========================================
+DECISION ENGINE DATA
+========================================= */
+
+const decisions={
+
+infant:[
+{category:"Infant",item:"Diapers",perDay:5},
+{category:"Infant",item:"Formula",perDay:3}
+],
+
+pets:[
+{category:"Pets",item:"Pet Food",perDay:2},
+{category:"Pets",item:"Pet Water",perDay:2}
+],
+
+medical:[
+{category:"Medical",item:"Prescription Medication",perDay:1}
+]
+
+};
+
+const weatherScenarios = {
+
+cold:[
+{category:"Shelter",item:"Thermal Blankets",perDay:0},
+{category:"Heating",item:"Portable Heater",perDay:0}
+],
+
+storm:[
+{category:"Tools",item:"Snow Shovel",perDay:0},
+{category:"Lighting",item:"Extra Batteries",perDay:0.5}
+],
+
+rain:[
+{category:"Protection",item:"Waterproof Containers",perDay:0},
+{category:"Safety",item:"Rubber Boots",perDay:0}
+]
+
+};
+
+function applyWeather(type){
+
+weatherScenarios[type].forEach(item=>{
+
+let exists = supplies.some(s=>s.item===item.item);
+
+if(!exists){
+supplies.push(item);
+}
+
+});
+
+calculate();
+
+}
+
+/* =========================================
+APPLY DECISION
+========================================= */
+
+function applyDecision(type){
+
+decisions[type].forEach(item=>{
+
+let exists=supplies.some(s=>s.item===item.item);
+
+if(!exists){
+supplies.push(item);
+}
+
+});
+
+calculate();
+
+}
+
+/* =========================================
+CALCULATE
+========================================= */
+
+function calculate(){
+
+let people=parseInt(document.getElementById("people").value);
+let days=parseInt(document.getElementById("days").value);
+
+let tbody=document.getElementById("results");
+tbody.innerHTML="";
+
+supplies.forEach(s=>{
+
+let total=s.perDay===0?1:Math.ceil(s.perDay*people*days);
+
+let row=document.createElement("tr");
+
+row.innerHTML=`
+<td><input type="checkbox" onchange="updateAll()"></td>
+<td>${s.category}</td>
+<td>${s.item}</td>
+<td>${total}</td>
+`;
+
+tbody.appendChild(row);
+
+});
+
+updateAll();
+
+}
+
+/* =========================================
+UPDATE FUNCTIONS
+========================================= */
+
+function updateAll(){
+updateProgress();
+updateMissing();
+}
+
+function updateProgress(){
+
+let checks=document.querySelectorAll("tbody input");
+let done=[...checks].filter(c=>c.checked).length;
+
+let percent=checks.length?Math.round(done/checks.length*100):0;
+
+document.getElementById("progressBar").style.width=percent+"%";
+document.getElementById("progressText").innerText=percent+"% Complete";
+
+}
+
+function updateMissing(){
+
+let rows=document.querySelectorAll("#results tr");
+let missing=[];
+
+rows.forEach(r=>{
+if(!r.querySelector("input").checked){
+missing.push(r.children[2].innerText);
+}
+});
+
+document.getElementById("missingItems").innerText=
+missing.length?missing.join("\n"):"None";
+
+}
+
+/* =========================================
+RESET
+========================================= */
+
+function resetForm(){
+
+supplies=[...baseSupplies];
+
+calculate();
+
+}
+
+/* INIT */
+calculate();
+
+</script>
+
+</body>
+</html>
