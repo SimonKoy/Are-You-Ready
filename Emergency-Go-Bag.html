@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<!-- =========================================================
+COMMUNITY DISASTER PREPAREDNESS SYSTEM
+Single-file emergency preparedness application
+
+FEATURES INCLUDED:
+- Personal information
+- Household members (unlimited)
+- Emergency contacts
+- Medical directives
+- Bible & literature checklist
+- Emergency supply calculator
+- Custom inventory tracking
+- Interactive evacuation map
+- QR emergency contact card
+- Email form
+- Print form
+- Auto-generated PDF emergency plan
+- Full reset capability
+
+This file works offline after loading.
+========================================================= -->
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Disaster Preparedness System</title>
+
+<!-- =========================================================
+STYLES
+========================================================= -->
+
+<style>
+
+/* =========================================================
+GENERAL PAGE STYLING
+========================================================= */
+
+body{
+font-family:Arial, sans-serif;
+background:#f2f2f2;
+margin:30px;
+}
+
+.container{
+background:white;
+max-width:1100px;
+margin:auto;
+padding:30px;
+border-radius:8px;
+box-shadow:0 0 15px rgba(0,0,0,0.15);
+}
+
+h1{
+text-align:center;
+color:#204d8c;
+}
+
+.section{
+margin-top:35px;
+padding-top:20px;
+border-top:1px solid #ccc;
+}
+
+/* =========================================================
+FORM ELEMENTS
+========================================================= */
+
+label{
+display:block;
+margin-top:10px;
+font-weight:bold;
+}
+
+input,
+textarea{
+width:100%;
+padding:8px;
+margin-top:4px;
+box-sizing:border-box;
+}
+
+textarea{
+resize:vertical;
+}
+
+/* =========================================================
+TABLES
+========================================================= */
+
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:10px;
+}
+
+table,
+th,
+td{
+border:1px solid #ccc;
+}
+
+th,
+td{
+padding:8px;
+text-align:left;
+}
+
+th{
+background:#f4f4f4;
+}
+
+/* =========================================================
+BUTTONS
+========================================================= */
+
+button{
+margin-top:15px;
+padding:12px 18px;
+border:none;
+border-radius:6px;
+cursor:pointer;
+font-size:15px;
+}
+
+button:hover{
+opacity:.9;
+}
+
+.primaryBtn{
+background:#2c6ed5;
+color:white;
+}
+
+.secondaryBtn{
+background:#444;
+color:white;
+}
+
+.greenBtn{
+background:#2f8b4b;
+color:white;
+}
+
+.redBtn{
+background:#a22;
+color:white;
+}
+
+/* =========================================================
+RESULT / INFO BOXES
+========================================================= */
+
+.results{
+background:#f8f8f8;
+padding:12px;
+border:1px solid #ddd;
+border-radius:6px;
+margin-top:10px;
+}
+
+/* =========================================================
+EMERGENCY CARD
+========================================================= */
+
+.card{
+border:2px solid #333;
+padding:12px;
+width:360px;
+background:white;
+margin-top:15px;
+}
+
+/* =========================================================
+MAP
+========================================================= */
+
+#map{
+height:450px;
+margin-top:10px;
+border:1px solid #ccc;
+}
+
+/* =========================================================
+PRINT MODE
+========================================================= */
+
+@media print{
+
+button{
+display:none;
+}
+
+body{
+background:white;
+margin:0;
+}
+
+.container{
+box-shadow:none;
+}
+
+}
+
+</style>
+
+<!-- =========================================================
+EXTERNAL LIBRARIES
+========================================================= -->
+
+<!-- Leaflet Map -->
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<script
+src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Leaflet Draw -->
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
+
+<script
+src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
+<!-- QR Code -->
+<script
+src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<!-- jsPDF -->
+<script
+src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>Disaster Preparedness System</h1>
+
+<form id="prepForm">
+
+<!-- =====================================================
+PERSONAL INFORMATION
+===================================================== -->
+
+<div class="section">
+
+<h3>Personal Information</h3>
+
+<label>Name*
+<input type="text" id="name" required>
+</label>
+
+<label>Mobile Number*
+<input type="text" id="mobile" required>
+</label>
+
+<label>Email*
+<input type="email" id="email" required>
+</label>
+
+<label>Address
+<textarea id="address"></textarea>
+</label>
+
+</div>
+
+<!-- =====================================================
+HOUSEHOLD MEMBERS
+===================================================== -->
+
+<div class="section">
+
+<h3>Household Members</h3>
+
+<table id="memberTable">
+
+<tr>
+<th>Name</th>
+<th>Age</th>
+<th>Medical Notes</th>
+<th>Remove</th>
+</tr>
+
+</table>
+
+<button
+type="button"
+class="primaryBtn"
+onclick="addMember()">
+
+Add Household Member
+
+</button>
+
+</div>
+
+<!-- =====================================================
+EMERGENCY CONTACT
+===================================================== -->
+
+<div class="section">
+
+<h3>Emergency Contact</h3>
+
+<label>Name
+<input type="text" id="em_name">
+</label>
+
+<label>Mobile Number
+<input type="text" id="em_mobile">
+</label>
+
+<label>Relationship
+<input type="text" id="em_relationship">
+</label>
+
+<label>Address
+<textarea id="em_address"></textarea>
+</label>
+
+</div>
+
+<!-- =====================================================
+MEDICAL DIRECTIVE
+===================================================== -->
+
+<div class="section">
+
+<h3>Medical Directive Information</h3>
+
+<label>Allergies
+<textarea id="allergies"></textarea>
+</label>
+
+<label>Medications
+<textarea id="medications"></textarea>
+</label>
+
+<label>Medical Directive Notes
+<textarea id="medical_notes"></textarea>
+</label>
+
+</div>
+
+<!-- =====================================================
+BIBLE & LITERATURE
+===================================================== -->
+
+<div class="section">
+
+<h3>Bible & Literature Preparedness</h3>
+
+<label><input type="checkbox"> Bible</label>
+<label><input type="checkbox"> Songbook / Worship Literature</label>
+<label><input type="checkbox"> Spiritual Notes</label>
+<label><input type="checkbox"> Encouraging Scriptures</label>
+
+</div>
+
+<!-- =====================================================
+SUPPLY CALCULATOR
+===================================================== -->
+
+<div class="section">
+
+<h3>Emergency Supply Calculator</h3>
+
+<label>Number of Household Members
+<input
+type="number"
+id="householdSize"
+value="1"
+min="1">
+</label>
+
+<button
+type="button"
+class="greenBtn"
+onclick="calculateSupplies()">
+
+Calculate Supplies
+
+</button>
+
+<div id="results" class="results"></div>
+
+</div>
+
+<!-- =====================================================
+CUSTOM INVENTORY SYSTEM
+===================================================== -->
+
+<div class="section">
+
+<h3>Emergency Supply Inventory</h3>
+
+<label>Item Name</label>
+<input type="text" id="itemName">
+
+<label>Quantity</label>
+<input
+type="number"
+id="itemQty"
+value="1"
+min="1">
+
+<button
+type="button"
+class="primaryBtn"
+onclick="addSupplyItem()">
+
+Add Supply Item
+
+</button>
+
+<table id="supplyTable">
+
+<tr>
+<th>Item</th>
+<th>Quantity</th>
+<th>Remove</th>
+</tr>
+
+</table>
+
+<div id="inventoryTotals" class="results">
+
+Total Items: 0
+
+</div>
+
+</div>
+
+<!-- =====================================================
+EMERGENCY CHECKLIST
+===================================================== -->
+
+<div class="section">
+
+<h3>Emergency Supplies Checklist</h3>
+
+<label><input type="checkbox"> Water Supply</label>
+<label><input type="checkbox"> Non-perishable Food</label>
+<label><input type="checkbox"> Flashlight</label>
+<label><input type="checkbox"> Batteries</label>
+<label><input type="checkbox"> Radio</label>
+<label><input type="checkbox"> First Aid Kit</label>
+<label><input type="checkbox"> Blankets</label>
+
+</div>
+
+<!-- =====================================================
+EVACUATION MAP
+===================================================== -->
+
+<div class="section">
+
+<h3>Interactive Evacuation Route Map</h3>
+
+<p>
+Draw evacuation routes and safe locations.
+</p>
+
+<div id="map"></div>
+
+</div>
+
+<!-- =====================================================
+EMERGENCY CARD
+===================================================== -->
+
+<div class="section">
+
+<h3>Wallet Emergency Contact Card</h3>
+
+<button
+type="button"
+class="primaryBtn"
+onclick="generateCard()">
+
+Generate Emergency Card
+
+</button>
+
+<div id="cardOutput"></div>
+
+<div id="qrcode"></div>
+
+</div>
+
+<!-- =====================================================
+ACTION BUTTONS
+===================================================== -->
+
+<div class="section">
+
+<button
+type="button"
+class="primaryBtn"
+onclick="sendEmail()">
+
+Email Form
+
+</button>
+
+<button
+type="button"
+class="secondaryBtn"
+onclick="printForm()">
+
+Print Form
+
+</button>
+
+<button
+type="button"
+class="greenBtn"
+onclick="generatePDF()">
+
+Generate Emergency PDF
+
+</button>
+
+<button
+type="button"
+class="redBtn"
+onclick="resetEntireForm()">
+
+Reset Form
+
+</button>
+
+</div>
+
+</form>
+
+</div>
+
+<!-- =========================================================
+JAVASCRIPT
+========================================================= -->
+
+<script>
+
+/* =========================================================
+CUSTOM INVENTORY ARRAY
+========================================================= */
+
+let supplyInventory=[];
+
+/* =========================================================
+ADD HOUSEHOLD MEMBER
+========================================================= */
+
+function addMember(){
+
+let table=document.getElementById("memberTable");
+
+let row=table.insertRow();
+
+row.innerHTML=
+`
+<td><input type="text"></td>
+
+<td><input type="text"></td>
+
+<td><input type="text"></td>
+
+<td>
+<button
+type="button"
+onclick="this.parentNode.parentNode.remove()">
+
+Remove
+
+</button>
+</td>
+`;
+
+}
+
+/* =========================================================
+SUPPLY CALCULATOR
+========================================================= */
+
+function calculateSupplies(){
+
+let people=parseInt(
+document.getElementById("householdSize").value
+);
+
+let water=people*4*3;
+let meals=people*3*3;
+
+document.getElementById("results").innerHTML=
+
+`
+<b>Recommended 72 Hour Supplies</b><br><br>
+
+Water: ${water} Liters<br>
+Meals: ${meals}<br>
+Blankets: ${people}<br>
+Flashlights: ${Math.ceil(people/2)}<br>
+First Aid Kits: 1
+`;
+
+}
+
+/* =========================================================
+ADD CUSTOM SUPPLY ITEM
+========================================================= */
+
+function addSupplyItem(){
+
+let item=
+document.getElementById("itemName").value.trim();
+
+let qty=parseInt(
+document.getElementById("itemQty").value
+);
+
+if(item===""){
+
+alert("Please enter an item name.");
+
+return;
+
+}
+
+if(isNaN(qty) || qty<1){
+
+alert("Please enter a valid quantity.");
+
+return;
+
+}
+
+supplyInventory.push({
+
+item:item,
+qty:qty
+
+});
+
+renderSupplyInventory();
+
+document.getElementById("itemName").value="";
+document.getElementById("itemQty").value=1;
+
+}
+
+/* =========================================================
+RENDER INVENTORY TABLE
+========================================================= */
+
+function renderSupplyInventory(){
+
+let table=document.getElementById("supplyTable");
+
+while(table.rows.length>1){
+
+table.deleteRow(1);
+
+}
+
+let total=0;
+
+supplyInventory.forEach((supply,index)=>{
+
+let row=table.insertRow();
+
+row.innerHTML=
+`
+<td>${supply.item}</td>
+
+<td>${supply.qty}</td>
+
+<td>
+<button
+type="button"
+onclick="removeSupplyItem(${index})">
+
+Remove
+
+</button>
+</td>
+`;
+
+total+=supply.qty;
+
+});
+
+document.getElementById("inventoryTotals").innerHTML=
+
+`
+<b>Total Supply Items:</b> ${total}
+`;
+
+}
+
+/* =========================================================
+REMOVE INVENTORY ITEM
+========================================================= */
+
+function removeSupplyItem(index){
+
+supplyInventory.splice(index,1);
+
+renderSupplyInventory();
+
+}
+
+/* =========================================================
+LEAFLET MAP
+========================================================= */
+
+let map=L.map('map').setView([43,-81],11);
+
+L.tileLayer(
+'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+{
+maxZoom:19
+}
+).addTo(map);
+
+let drawnItems=new L.FeatureGroup();
+
+map.addLayer(drawnItems);
+
+let drawControl=new L.Control.Draw({
+
+edit:{
+featureGroup:drawnItems
+},
+
+draw:{
+polygon:true,
+polyline:true,
+rectangle:true,
+circle:false,
+marker:true
+}
+
+});
+
+map.addControl(drawControl);
+
+map.on(L.Draw.Event.CREATED,function(event){
+
+drawnItems.addLayer(event.layer);
+
+});
+
+/* =========================================================
+GENERATE QR EMERGENCY CARD
+========================================================= */
+
+function generateCard(){
+
+let name=document.getElementById("name").value;
+
+let mobile=document.getElementById("mobile").value;
+
+let contact=document.getElementById("em_name").value;
+
+let phone=document.getElementById("em_mobile").value;
+
+let cardHTML=
+
+`
+<div class="card">
+
+<b>Emergency Contact Card</b><br><br>
+
+Name: ${name}<br>
+Mobile: ${mobile}<br><br>
+
+Emergency Contact: ${contact}<br>
+Emergency Phone: ${phone}
+
+</div>
+`;
+
+document.getElementById("cardOutput").innerHTML=
+cardHTML;
+
+/* Generate QR code */
+
+let qrText=
+
+`
+Name: ${name}
+Mobile: ${mobile}
+Emergency Contact: ${contact}
+Emergency Phone: ${phone}
+`;
+
+document.getElementById("qrcode").innerHTML="";
+
+new QRCode(document.getElementById("qrcode"),{
+
+text:qrText,
+width:160,
+height:160
+
+});
+
+}
+
+/* =========================================================
+BUILD INVENTORY TEXT
+========================================================= */
+
+function buildInventoryText(){
+
+let text="";
+
+supplyInventory.forEach(item=>{
+
+text+=`${item.item}: ${item.qty}\n`;
+
+});
+
+return text;
+
+}
+
+/* =========================================================
+BUILD EMAIL CONTENT
+========================================================= */
+
+function buildChecklist(){
+
+return `
+COMMUNITY DISASTER PREPAREDNESS FORM
+
+Name:
+${document.getElementById("name").value}
+
+Mobile:
+${document.getElementById("mobile").value}
+
+Email:
+${document.getElementById("email").value}
+
+Emergency Contact:
+${document.getElementById("em_name").value}
+
+Emergency Phone:
+${document.getElementById("em_mobile").value}
+
+Medical Notes:
+${document.getElementById("medical_notes").value}
+
+Supply Inventory:
+${buildInventoryText()}
+
+`;
+}
+
+/* =========================================================
+EMAIL FORM
+========================================================= */
+
+function sendEmail(){
+
+if(!document.getElementById("prepForm").checkValidity()){
+
+alert("Please complete required fields.");
+
+return;
+
+}
+
+let body=buildChecklist();
+
+let subject=
+"Community Disaster Preparedness Form";
+
+let link=
+
+"mailto:myministry@rogers.com"+
+"?subject="+encodeURIComponent(subject)+
+"&body="+encodeURIComponent(body);
+
+window.location.href=link;
+
+}
+
+/* =========================================================
+PRINT FORM
+========================================================= */
+
+function printForm(){
+
+window.print();
+
+}
+
+/* =========================================================
+GENERATE PDF
+========================================================= */
+
+async function generatePDF(){
+
+const { jsPDF } = window.jspdf;
+
+let doc=new jsPDF();
+
+doc.setFontSize(18);
+
+doc.text(
+"Family Emergency Plan",
+20,
+20
+);
+
+doc.setFontSize(12);
+
+doc.text(
+"Name: "+
+document.getElementById("name").value,
+20,
+40
+);
+
+doc.text(
+"Mobile: "+
+document.getElementById("mobile").value,
+20,
+50
+);
+
+doc.text(
+"Emergency Contact: "+
+document.getElementById("em_name").value,
+20,
+60
+);
+
+doc.text(
+"Emergency Phone: "+
+document.getElementById("em_mobile").value,
+20,
+70
+);
+
+doc.text(
+"Medical Notes:",
+20,
+90
+);
+
+doc.text(
+document.getElementById("medical_notes").value,
+20,
+100
+);
+
+doc.text(
+"Supply Inventory:",
+20,
+120
+);
+
+doc.text(
+buildInventoryText(),
+20,
+130
+);
+
+doc.save(
+"Family_Emergency_Plan.pdf"
+);
+
+}
+
+/* =========================================================
+RESET ENTIRE FORM
+========================================================= */
+
+function resetEntireForm(){
+
+let confirmReset=confirm(
+"Are you sure you want to clear the entire form?"
+);
+
+if(!confirmReset){
+
+return;
+
+}
+
+/* Reset form fields */
+
+document.getElementById("prepForm").reset();
+
+/* Clear household table */
+
+let memberTable=
+document.getElementById("memberTable");
+
+while(memberTable.rows.length>1){
+
+memberTable.deleteRow(1);
+
+}
+
+/* Clear inventory */
+
+supplyInventory=[];
+
+renderSupplyInventory();
+
+/* Clear QR code */
+
+document.getElementById("qrcode").innerHTML="";
+
+/* Clear emergency card */
+
+document.getElementById("cardOutput").innerHTML="";
+
+/* Clear supply calculator */
+
+document.getElementById("results").innerHTML="";
+
+/* Clear map drawings */
+
+drawnItems.clearLayers();
+
+alert("Form has been reset.");
+
+}
+
+</script>
+
+</body>
+</html>
